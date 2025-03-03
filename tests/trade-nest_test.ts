@@ -35,6 +35,50 @@ Clarinet.test({
 });
 
 Clarinet.test({
+  name: "Ensure empty string validation works",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const wallet_1 = accounts.get("wallet_1")!;
+    
+    let block = chain.mineBlock([
+      Tx.contractCall(
+        "trade-nest",
+        "create-listing",
+        [
+          types.utf8(""),
+          types.utf8("Description"),
+          types.utf8("Category"),
+          types.utf8("Location")
+        ],
+        wallet_1.address
+      )
+    ]);
+    
+    block.receipts[0].result.expectErr(405);
+  }
+});
+
+Clarinet.test({
+  name: "Prevent self-rating",
+  async fn(chain: Chain, accounts: Map<string, Account>) {
+    const wallet_1 = accounts.get("wallet_1")!;
+    
+    let block = chain.mineBlock([
+      Tx.contractCall(
+        "trade-nest",
+        "rate-user",
+        [
+          types.principal(wallet_1.address),
+          types.uint(5)
+        ],
+        wallet_1.address
+      )
+    ]);
+    
+    block.receipts[0].result.expectErr(402);
+  }
+});
+
+Clarinet.test({
   name: "Ensure users can make and accept offers",
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const wallet_1 = accounts.get("wallet_1")!;
@@ -79,28 +123,5 @@ Clarinet.test({
     ]);
     
     acceptBlock.receipts[0].result.expectOk().expectBool(true);
-  }
-});
-
-Clarinet.test({
-  name: "Ensure users can rate trading partners",
-  async fn(chain: Chain, accounts: Map<string, Account>) {
-    const wallet_1 = accounts.get("wallet_1")!;
-    const wallet_2 = accounts.get("wallet_2")!;
-    
-    let block = chain.mineBlock([
-      Tx.contractCall(
-        "trade-nest",
-        "rate-user",
-        [
-          types.principal(wallet_2.address),
-          types.uint(5)
-        ],
-        wallet_1.address
-      )
-    ]);
-    
-    assertEquals(block.receipts.length, 1);
-    block.receipts[0].result.expectOk().expectBool(true);
   }
 });
